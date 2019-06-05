@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+
+import config
+
 import os
 import glob
 import time
@@ -13,30 +17,20 @@ def get_logger(logger_name):
     file_formatter = Formatter(
         '%(levelname)s | %(asctime)s | %(name)s | %(message)s | %(pathname)s:%(lineno)d'
     )
+    #TODO the path for the logs file needs to be absolute when the script is executed on startup when registered in the /etc/rc.local file
     time_rotating_handler = TimedRotatingFileHandler(\
-            '{0}/{1}.log'.format('./tmp', logger_name), when="midnight", backupCount=10, encoding='utf-8')
+            '{0}/{1}.log'.format('./logs', logger_name), when="midnight", backupCount=10, encoding='utf-8')
     time_rotating_handler.suffix = "%Y-%m-%d"
     time_rotating_handler.setFormatter(file_formatter)
 
-    echo_formatter = Formatter('[%(levelname)s][%(name)s][in %(filename)s:%(lineno)d] %(message)s')
-    stream_handler = StreamHandler(stream=os.sys.stdout)
-    stream_handler.setFormatter(echo_formatter)
-
     _logger.addHandler(time_rotating_handler)
-    _logger.addHandler(stream_handler)
     _logger.setLevel(logging.DEBUG)
 
     return _logger
 
 def init_db():
-    logging.info('Initializing DB...')
+    #TODO the path for the db file needs to be absolute
     conn = sqlite3.connect('thermostat.db')
-    conn.execute('''CREATE TABLE IF NOT EXISTS temperatures
-                (date text NOT NULL, temperature real NOT NULL)''')
-    conn.execute(
-        '''CREATE INDEX IF NOT EXISTS date_index ON temperatures(date)''')
-    logging.info('DB initialized')
-    conn.commit()
     return conn
 
 def read_temp_raw():
@@ -56,6 +50,12 @@ def read_temp():
         temp_c = float(temp_string) / 1000.0
     return temp_c
 
+def get_time_range(datetime : datetime.datetime):
+    time_range = datetime.hour * 2
+    if (datetime.minute <= 30):
+        time_range += 1
+    return time_range
+
 logger = get_logger('thermostat')
 
 os.system('modprobe w1-gpio')
@@ -67,14 +67,17 @@ device_file = device_folder + '/w1_slave'
 try:
     conn = init_db()
     while True:
-        current_time = datetime.datetime.now().strftime('%Y%m%dT%H:%M')
+        now = datetime.datetime.now()
+        current_time = now.strftime('%Y%m%dT%H:%M')
         current_temp = read_temp()
         logger.debug('Read temperature %s° at time %s',
                       current_temp, current_time)
         conn.execute('INSERT INTO temperatures VALUES (?, ?)',
                      (current_time, current_temp))
         conn.commit()
-        time.sleep(3)
+        for row in conn.execute('SELECT temperature FROM week_schedule WHERE day = ? AND time_range = ?', (0, get_time_range(now))):
+            print(row[0])
+        time.sleep(60)
 except KeyboardInterrupt:
     logger.warn('Temperature daemon stopped by user')
 finally:
