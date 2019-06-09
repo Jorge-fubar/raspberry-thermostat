@@ -8,16 +8,20 @@ Project to transform your Raspberry Pi into a thermosat
 To make the script work, a few initial steps are required:
 
 1. Enable 1-Wire interface on your raspberry:
-
-  run ```sudo raspi-config```
-  select "Interface options"
-  select "1-Wire"
-  choose "Yes" when promtped if you like the 1-Wire interface to be enabled
+  - run `sudo raspi-config`
+  - select "Interface options"
+  - select "1-Wire"
+  - choose "Yes" when promtped if you like the 1-Wire interface to be enabled
 2. Wire the sensor:
-  power cable to PIN 1 (3.3V)
-  ground cable to PIN 6
-  sensor cable to PIN 7 (GPIO4)
-
+  - power cable to PIN 1 (3.3V)
+  - ground cable to PIN 6
+  - sensor cable to PIN 7 (GPIO4)
+3. Make the screen turn off after X seconds
+  By default Raspbian (version 9) sets the screen to idle after a fixed period of time not configurable by GUI (at least I've found or read about). To do so we need to add some config in a couple of system files:
+  - run `sudo vim /boot/config.txt`
+  - add the line `hdmi_blanking=1` to the file. This will prevent the screen blanking, turning the monitor off instead
+  - run `sudo vim /etc/xdg/lxsession/LXDE-pi/autostart`
+  - add the line `@xset dpms 0 0 X` to the file, where X is a number that specifies the amount of seconds the system will wait till it turns off the screen. For example, I've added to my file the line `@xset dpms 0 0 10`
 
 ## TODOs
 

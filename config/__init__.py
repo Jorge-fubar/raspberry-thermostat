@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import sqlite3
 
-#TODO the path for the db file needs to be absolute
+#TODO would it be better for the db file's path to be absolute?
 try:
     conn = sqlite3.connect('thermostat.db')
 
